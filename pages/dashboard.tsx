@@ -1,9 +1,10 @@
 import React from 'react';
-import { useTelegram } from '@vkruglikov/react-telegram-web-app';
+import { useInitData, useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { useRouter } from 'next/router';
 
 export default function Dashboard() {
-  const { initDataUnsafe, tg } = useTelegram();
+  const [initDataUnsafe] = useInitData();
+  const tg = useWebApp();
   const router = useRouter();
 
   const handleLogout = () => {

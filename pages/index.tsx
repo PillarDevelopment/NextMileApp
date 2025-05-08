@@ -20,7 +20,7 @@ export default function Home() {
         router.push('/dashboard');
       }
     } else {
-      alert('Telegram WebApp SDK не инициализирован');
+      alert('Telegram WebApp SDK не инициализирован.\n\nПроверьте, что вы открыли приложение внутри Telegram.\n\nDebug info: tg=' + String(!!tg) + ', initDataUnsafe=' + JSON.stringify(initDataUnsafe));
     }
   };
 
@@ -33,6 +33,10 @@ export default function Home() {
       >
         Войти через Telegram
       </button>
+      <p className="mt-6 text-sm text-gray-400 text-center max-w-xs">
+        Для корректной работы авторизации откройте приложение внутри Telegram.<br />
+        <span className="block mt-2">Debug: tg = {String(!!tg)}, user = {initDataUnsafe?.user ? 'есть' : 'нет'}</span>
+      </p>
     </div>
   );
 } 

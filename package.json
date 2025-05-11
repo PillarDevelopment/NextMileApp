@@ -19,6 +19,7 @@
     "@types/react": "18.2.14",
     "@types/react-dom": "18.2.7",
     "typescript": "5.2.2",
-    "@vkruglikov/react-telegram-web-app": "2.1.9"
+    "@vkruglikov/react-telegram-web-app": "2.1.9",
+    "@supabase/supabase-js": "2.39.7"
   }
 } 

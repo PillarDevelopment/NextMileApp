@@ -8,10 +8,27 @@ export default function Home() {
   const tg = useWebApp();
 
   useEffect(() => {
-    if (initDataUnsafe?.user) {
-      router.push('/dashboard');
+    if (typeof window !== 'undefined') {
+      if (!tg || !initDataUnsafe?.user) {
+        console.warn('Telegram SDK не инициализирован.', {
+          tg: !!tg,
+          initDataUnsafe,
+        });
+        alert(
+          'Telegram WebApp SDK не инициализирован.\n\nПроверьте, что вы открыли приложение внутри Telegram.\n\nDebug info:\n tg=' +
+            String(!!tg) +
+            '\n initDataUnsafe=' +
+            JSON.stringify(initDataUnsafe)
+        );
+        return;
+      }
+
+      // если всё ок, переходим на dashboard
+      if (initDataUnsafe?.user) {
+        router.push('/dashboard');
+      }
     }
-  }, [initDataUnsafe, router]);
+  }, [initDataUnsafe, router, tg]);
 
   const handleLogin = () => {
     if (tg) {
@@ -20,7 +37,12 @@ export default function Home() {
         router.push('/dashboard');
       }
     } else {
-      alert('Telegram WebApp SDK не инициализирован.\n\nПроверьте, что вы открыли приложение внутри Telegram.\n\nDebug info: tg=' + String(!!tg) + ', initDataUnsafe=' + JSON.stringify(initDataUnsafe));
+      alert(
+        'Telegram WebApp SDK не инициализирован.\n\nПроверьте, что вы открыли приложение внутри Telegram.\n\nDebug info: tg=' +
+          String(!!tg) +
+          ', initDataUnsafe=' +
+          JSON.stringify(initDataUnsafe)
+      );
     }
   };
 
@@ -34,9 +56,12 @@ export default function Home() {
         Войти через Telegram
       </button>
       <p className="mt-6 text-sm text-gray-400 text-center max-w-xs">
-        Для корректной работы авторизации откройте приложение внутри Telegram.<br />
-        <span className="block mt-2">Debug: tg = {String(!!tg)}, user = {initDataUnsafe?.user ? 'есть' : 'нет'}</span>
+        Для корректной работы авторизации откройте приложение внутри Telegram.
+        <br />
+        <span className="block mt-2">
+          Debug: tg = {String(!!tg)}, user = {initDataUnsafe?.user ? 'есть' : 'нет'}
+        </span>
       </p>
     </div>
   );
-} 
+}

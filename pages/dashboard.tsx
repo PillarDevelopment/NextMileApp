@@ -1,29 +1,59 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabaseClient';
+import jwtDecode from 'jwt-decode';
 
 export default function Dashboard() {
   const [goals, setGoals] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // Получаем Telegram user ID из initData
+  const initData = router.query.initData || '';
+  let telegramId = '';
+  try {
+    if (initData) {
+      const decoded: any = jwtDecode(String(initData));
+      telegramId = decoded.user?.id ? String(decoded.user.id) : '';
+    } else if (process.env.NODE_ENV === 'development') {
+      telegramId = 'dev-test-user'; // fallback для локальной разработки
+    }
+  } catch {
+    if (process.env.NODE_ENV === 'development') {
+      telegramId = 'dev-test-user';
+    } else {
+      telegramId = '';
+    }
+  }
+
   useEffect(() => {
+    if (!telegramId) {
+      setError('Нет данных Telegram пользователя. Откройте WebApp через Telegram или добавьте initData в query.');
+      setLoading(false);
+      return;
+    }
     const fetchData = async () => {
       setLoading(true);
-      const { data: goalsData } = await supabase.from('goals').select('*').order('deadline');
-      const { data: tasksData } = await supabase.from('tasks').select('*').eq('status', 'todo');
+      const { data: goalsData } = await supabase.from('goals').select('*').eq('telegram_id', telegramId).order('deadline');
+      const { data: tasksData } = await supabase.from('tasks').select('*').eq('telegram_id', telegramId).eq('status', 'todo');
       setGoals(goalsData || []);
       setTasks(tasksData || []);
       setLoading(false);
+      if ((goalsData || []).length === 0) {
+        router.replace({ pathname: '/onboarding', query: { initData } });
+      }
     };
     fetchData();
-  }, []);
+    // eslint-disable-next-line
+  }, [telegramId]);
 
   // Фейковый бизнес-нагрузка (рандом)
   const businessLoad = 40 + Math.floor(Math.random() * 40);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen">Загрузка...</div>;
+  if (error) return <div className="flex items-center justify-center min-h-screen text-center text-red-400">{error}</div>;
 
   return (
     <div className="flex flex-col items-center min-h-screen px-4 py-8">
@@ -40,7 +70,7 @@ export default function Dashboard() {
           <div className="font-semibold">Ваши цели</div>
           <button
             className="bg-telegramAccent text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-500 transition"
-            onClick={() => router.push('/create-goal')}
+            onClick={() => router.push({ pathname: '/create-goal', query: { initData } })}
           >
             + Новая цель
           </button>
@@ -58,7 +88,7 @@ export default function Dashboard() {
               <div className="flex gap-2">
                 <button
                   className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
-                  onClick={() => router.push(`/plan-ai?goal_id=${goal.id}`)}
+                  onClick={() => router.push({ pathname: '/plan-ai', query: { goal_id: goal.id, initData } })}
                 >
                   План от AI
                 </button>

@@ -1,26 +1,27 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 
-const categories = ['Финансы', 'Маркетинг', 'Продукт', 'Операции', 'Личное'];
+const categories = ['Финансы', 'Маркетинг', 'Продукт', 'Личное'];
 
-export default function CreateGoal() {
+export default function Onboarding() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(categories[0]);
   const [deadline, setDeadline] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const initData = router.query.initData || '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    // Получаем initData из query (Telegram WebApp)
+    const initData = router.query.initData || '';
     const res = await fetch('/api/goals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, category, deadline, initData }),
     });
     if (res.ok) {
-      router.push({ pathname: '/dashboard', query: { initData } });
+      router.push('/dashboard?initData=' + encodeURIComponent(String(initData)));
     } else {
       alert('Ошибка создания цели');
       setLoading(false);
@@ -29,7 +30,7 @@ export default function CreateGoal() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Создать новую цель</h1>
+      <h1 className="text-2xl font-bold mb-6">Ваша первая цель</h1>
       <form onSubmit={handleSubmit} className="bg-white/10 rounded-xl p-6 w-full max-w-md flex flex-col gap-4">
         <div>
           <label className="block mb-1 font-semibold">Название цели</label>

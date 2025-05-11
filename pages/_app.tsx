@@ -15,15 +15,19 @@ function InitDataProvider({ children }: { children: React.ReactNode }) {
     const origReplace = router.replace;
     router.push = (url, as, options) => {
       if (typeof url === 'string') return origPush(url, as, options);
-      if (url && typeof url === 'object' && !url.query?.initData) {
-        url.query = { ...url.query, initData };
+      if (url && typeof url === 'object') {
+        if (typeof url.query === 'object' && url.query !== null && !('initData' in url.query)) {
+          url.query = { ...url.query, initData };
+        }
       }
       return origPush(url, as, options);
     };
     router.replace = (url, as, options) => {
       if (typeof url === 'string') return origReplace(url, as, options);
-      if (url && typeof url === 'object' && !url.query?.initData) {
-        url.query = { ...url.query, initData };
+      if (url && typeof url === 'object') {
+        if (typeof url.query === 'object' && url.query !== null && !('initData' in url.query)) {
+          url.query = { ...url.query, initData };
+        }
       }
       return origReplace(url, as, options);
     };

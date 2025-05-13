@@ -12,32 +12,32 @@ export default function Dashboard() {
 
   // Получаем Telegram user ID из initData
   const initData = router.query.initData || '';
-  let telegramId = '';
+  let userId = '';
   try {
     if (initData) {
       const decoded: any = jwtDecode(String(initData));
-      telegramId = decoded.user?.id ? String(decoded.user.id) : '';
+      userId = decoded.user?.id ? String(decoded.user.id) : '';
     } else if (process.env.NODE_ENV === 'development') {
-      telegramId = 'dev-test-user'; // fallback для локальной разработки
+      userId = 'dev-test-user'; // fallback для локальной разработки
     }
   } catch {
     if (process.env.NODE_ENV === 'development') {
-      telegramId = 'dev-test-user';
+      userId = 'dev-test-user';
     } else {
-      telegramId = '';
+      userId = '';
     }
   }
 
   useEffect(() => {
-    if (!telegramId) {
+    if (!userId) {
       setError('Нет данных Telegram пользователя. Откройте WebApp через Telegram или добавьте initData в query.');
       setLoading(false);
       return;
     }
     const fetchData = async () => {
       setLoading(true);
-      const { data: goalsData } = await supabase.from('goals').select('*').eq('telegram_id', telegramId).order('deadline');
-      const { data: tasksData } = await supabase.from('tasks').select('*').eq('telegram_id', telegramId).eq('status', 'todo');
+      const { data: goalsData } = await supabase.from('goals').select('*').eq('user_id', userId).order('deadline');
+      const { data: tasksData } = await supabase.from('tasks').select('*').eq('user_id', userId).eq('status', 'todo');
       setGoals(goalsData || []);
       setTasks(tasksData || []);
       setLoading(false);
@@ -47,7 +47,7 @@ export default function Dashboard() {
     };
     fetchData();
     // eslint-disable-next-line
-  }, [telegramId]);
+  }, [userId]);
 
   // Фейковый бизнес-нагрузка (рандом)
   const businessLoad = 40 + Math.floor(Math.random() * 40);

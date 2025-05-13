@@ -11,26 +11,26 @@ export default function PlanAI() {
   const [loading, setLoading] = useState(true);
 
   // Получаем Telegram user ID из initData
-  let telegramId = '';
+  let userId = '';
   try {
     const decoded: any = jwtDecode(String(initData));
-    telegramId = decoded.user?.id ? String(decoded.user.id) : '';
+    userId = decoded.user?.id ? String(decoded.user.id) : '';
   } catch {
-    telegramId = '';
+    userId = '';
   }
 
   useEffect(() => {
-    if (!goal_id || !telegramId) return;
+    if (!goal_id || !userId) return;
     const fetchData = async () => {
       setLoading(true);
-      const { data: goalData } = await supabase.from('goals').select('*').eq('id', goal_id).eq('telegram_id', telegramId).single();
+      const { data: goalData } = await supabase.from('goals').select('*').eq('id', goal_id).eq('user_id', userId).single();
       const { data: plansData } = await supabase.from('plans').select('*').eq('goal_id', goal_id).order('sprint');
       setGoal(goalData);
       setPlans(plansData || []);
       setLoading(false);
     };
     fetchData();
-  }, [goal_id, telegramId]);
+  }, [goal_id, userId]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen">Загрузка...</div>;
   if (!goal) return <div className="flex items-center justify-center min-h-screen">Цель не найдена</div>;

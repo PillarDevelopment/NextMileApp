@@ -22,7 +22,6 @@ export default function Home() {
         );
         return;
       }
-
       // если всё ок, переходим на dashboard
       if (initDataUnsafe?.user) {
         router.push('/dashboard');
@@ -43,6 +42,7 @@ export default function Home() {
           ', initDataUnsafe=' +
           JSON.stringify(initDataUnsafe)
       );
+      console.warn('Блять!!!');
     }
   };
 

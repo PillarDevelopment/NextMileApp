@@ -1,51 +1,56 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useTelegram } from '@vkruglikov/react-telegram-web-app';
 
 export default function Home() {
   const router = useRouter();
-  const { webApp: tg, user } = useTelegram();
+  const [tg, setTg] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Проверяем, что приложение запущено в Telegram
-      if (!window.Telegram?.WebApp) {
-        console.warn('Приложение запущено вне Telegram');
-        alert(
-          'Telegram WebApp SDK не инициализирован.\n\nПроверьте, что вы открыли приложение внутри Telegram.'
-        );
-        return;
-      }
+    setIsClient(true);
+  }, []);
 
-      // Если SDK доступен и есть пользователь
-      if (tg && user) {
-        router.push('/dashboard');
+  useEffect(() => {
+    if (isClient && typeof window !== 'undefined') {
+      // Проверяем доступность Telegram WebApp
+      if (window.Telegram?.WebApp) {
+        const webApp = window.Telegram.WebApp;
+        webApp.ready();
+        
+        setTg(webApp);
+        setUser(webApp.initDataUnsafe?.user);
+        
+        // Если пользователь есть, переходим на dashboard
+        if (webApp.initDataUnsafe?.user) {
+          router.push('/dashboard');
+        }
+      } else {
+        console.warn('Telegram WebApp SDK не доступен');
       }
     }
-  }, [tg, user, router]);
+  }, [isClient, router]);
 
   const handleLogin = () => {
     if (tg) {
       tg.expand();
-      // Вызываем ready для полной инициализации
-      tg.ready();
-      
       if (user) {
         router.push('/dashboard');
       }
     } else {
       alert(
-        'Telegram WebApp SDK не инициализирован.\n\nПроверьте, что вы открыли приложение внутри Telegram.'
+        'Telegram WebApp SDK не инициализирован.\n\nПроверьте, что вы открыли приложение внутри Telegram.\n\nDebug info: tg=' +
+          String(!!tg) +
+          ', initDataUnsafe=' +
+          JSON.stringify(user)
       );
     }
   };
 
-  // Добавим отладочную информацию
-  useEffect(() => {
-    console.log('WebApp object:', tg);
-    console.log('User:', user);
-    console.log('Window Telegram:', window.Telegram);
-  }, [tg, user]);
+  // Не рендерим компонент на сервере
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4">

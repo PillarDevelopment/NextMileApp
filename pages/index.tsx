@@ -96,7 +96,10 @@ export default function Home() {
           <button
             className="bg-green-500 text-white px-6 py-3 rounded-lg"
             onClick={() => {
-              window.Telegram.WebApp.showAlert('Test Alert from WebApp');
+              // Исправляем TypeScript ошибку с проверкой
+              if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showAlert('Test Alert from WebApp');
+              }
             }}
           >
             Тест Alert

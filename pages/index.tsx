@@ -14,11 +14,15 @@ export default function Home() {
   const router = useRouter();
   const [status, setStatus] = useState('Инициализация...');
   const [debugInfo, setDebugInfo] = useState<any>({});
+  const [isWebApp, setIsWebApp] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      setIsWebApp(true);
+    }
     // Ждем полной загрузки
     const timer = setTimeout(() => {
-      if (window.Telegram?.WebApp) {
+      if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
         
         // Важно: вызываем ready() первым делом
@@ -108,12 +112,11 @@ export default function Home() {
           Обновить
         </button>
         
-        {window.Telegram?.WebApp && (
+        {isWebApp && (
           <button
             className="bg-green-500 text-white px-6 py-3 rounded-lg"
             onClick={() => {
-              // Исправляем TypeScript ошибку с проверкой
-              if (window.Telegram?.WebApp) {
+              if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
                 window.Telegram.WebApp.showAlert('Test Alert from WebApp');
               }
             }}

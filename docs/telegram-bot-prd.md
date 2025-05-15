@@ -204,7 +204,514 @@ Business Connect Telegram Bot — это облегченная версия о�
 - Настраиваемое время уведомлений
 - Персонализированный контент на основе данных пользователя
 
-## 8. Развертывание и инфраструктура
+## 8. Примеры кода интеграции
+
+### 8.1 Инициализация Telegram бота
+```javascript
+// bot.js
+const TelegramBot = require('node-telegram-bot-api');
+const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
+
+// Инициализация бота
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { 
+  webHook: true 
+});
+
+// Инициализация Supabase
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
+// Настройка webhook
+const app = express();
+app.use(express.json());
+
+app.post(`/bot${process.env.TELEGRAM_BOT_TOKEN}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+// Команда /start
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  
+  // Проверка существующего пользователя
+  const { data: user } = await supabase
+    .from('users')
+    .select('*')
+    .eq('telegram_id', userId)
+    .single();
+  
+  if (user) {
+    // Отправка web app кнопки
+    await bot.sendMessage(chatId, 'Добро пожаловать обратно!', {
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: 'Открыть Business Connect',
+            web_app: { url: process.env.WEB_APP_URL }
+          }
+        ]]
+      }
+    });
+  } else {
+    // Регистрация нового пользователя
+    await bot.sendMessage(chatId, 
+      'Для использования бота необходим аккаунт Business Connect'
+    );
+  }
+});
+```
+
+### 8.2 Web App инициализация
+```javascript
+// App.js (React Native Web)
+import React, { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+const tg = window.Telegram.WebApp;
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Инициализация Telegram Web App
+    tg.ready();
+    tg.expand();
+    
+    // Получение данных пользователя
+    authenticateUser();
+  }, []);
+
+  const authenticateUser = async () => {
+    const telegramId = tg.initDataUnsafe?.user?.id;
+    
+    if (!telegramId) {
+      tg.close();
+      return;
+    }
+
+    // Авторизация через Telegram ID
+    const { data: userData } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .single();
+
+    if (userData) {
+      setUser(userData);
+      // Инициализация JWT токена
+      const { data: { session } } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password: userData.telegram_id // временное решение
+      });
+    }
+    
+    setLoading(false);
+  };
+
+  if (loading) return <div>Загрузка...</div>;
+  if (!user) return <div>Пользователь не найден</div>;
+
+  return <Dashboard user={user} />;
+}
+```
+
+### 8.3 Отправка уведомлений
+```javascript
+// notifications.js
+const schedule = require('node-schedule');
+
+// Утренние уведомления
+const sendMorningNotifications = async () => {
+  // Получение пользователей с активными задачами
+  const { data: users } = await supabase
+    .from('users')
+    .select(`
+      id,
+      telegram_id,
+      notification_time,
+      tasks(
+        id,
+        title,
+        scheduled_date,
+        status
+      )
+    `)
+    .eq('tasks.scheduled_date', new Date().toISOString().split('T')[0])
+    .eq('tasks.status', 'pending');
+
+  for (const user of users) {
+    if (user.tasks.length > 0) {
+      const taskList = user.tasks
+        .map((task, idx) => `${idx + 1}. ${task.title}`)
+        .join('\n');
+
+      await bot.sendMessage(user.telegram_id, 
+        `🌅 Доброе утро!\n\nВаши задачи на сегодня:\n${taskList}`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              ...user.tasks.map(task => [{
+                text: `✅ Выполнить: ${task.title.substring(0, 20)}...`,
+                callback_data: `complete_task_${task.id}`
+              }]),
+              [{
+                text: '📱 Открыть приложение',
+                web_app: { url: process.env.WEB_APP_URL }
+              }]
+            ]
+          }
+        }
+      );
+    }
+  }
+};
+
+// Обработка inline кнопок
+bot.on('callback_query', async (query) => {
+  const action = query.data;
+  const userId = query.from.id;
+
+  if (action.startsWith('complete_task_')) {
+    const taskId = action.replace('complete_task_', '');
+    
+    // Обновление статуса задачи
+    await supabase
+      .from('tasks')
+      .update({ 
+        status: 'completed',
+        completed_at: new Date()
+      })
+      .eq('id', taskId);
+
+    await bot.answerCallbackQuery(query.id, {
+      text: 'Задача отмечена как выполненная! ✅'
+    });
+    
+    // Обновление сообщения
+    await bot.editMessageReplyMarkup(
+      { inline_keyboard: [] },
+      {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id
+      }
+    );
+  }
+});
+
+// Планирование уведомлений
+schedule.scheduleJob('0 9 * * *', sendMorningNotifications);
+```
+
+### 8.4 React Native компонент для дашборда
+```jsx
+// Dashboard.jsx
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { supabase } from './supabaseClient';
+
+const Dashboard = ({ user }) => {
+  const [businessLoad, setBusinessLoad] = useState(0);
+  const [goals, setGoals] = useState([]);
+  const [todayTasks, setTodayTasks] = useState([]);
+
+  useEffect(() => {
+    loadDashboardData();
+    
+    // Подписка на изменения в реальном времени
+    const subscription = supabase
+      .channel('dashboard-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'tasks' },
+        handleRealtimeUpdate
+      )
+      .subscribe();
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadDashboardData = async () => {
+    // Загрузка Business Load
+    const { data: progressData } = await supabase
+      .from('daily_progress')
+      .select('business_load')
+      .eq('user_id', user.id)
+      .eq('date', new Date().toISOString().split('T')[0])
+      .single();
+
+    if (progressData) {
+      setBusinessLoad(progressData.business_load);
+    }
+
+    // Загрузка целей
+    const { data: goalsData } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    setGoals(goalsData || []);
+
+    // Загрузка задач на сегодня
+    const { data: tasksData } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('scheduled_date', new Date().toISOString().split('T')[0])
+      .order('priority', { ascending: false });
+
+    setTodayTasks(tasksData || []);
+  };
+
+  const handleRealtimeUpdate = (payload) => {
+    if (payload.eventType === 'UPDATE' && payload.new.status === 'completed') {
+      setTodayTasks(prev => 
+        prev.map(task => 
+          task.id === payload.new.id 
+            ? { ...task, status: 'completed' }
+            : task
+        )
+      );
+    }
+  };
+
+  const completeTask = async (taskId) => {
+    await supabase
+      .from('tasks')
+      .update({ 
+        status: 'completed',
+        completed_at: new Date()
+      })
+      .eq('id', taskId);
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* Business Load индикатор */}
+      <View style={styles.businessLoadSection}>
+        <Text style={styles.sectionTitle}>Бизнес-нагрузка</Text>
+        <View style={styles.loadBar}>
+          <View style={[
+            styles.loadFill,
+            { 
+              width: `${businessLoad}%`,
+              backgroundColor: businessLoad > 70 ? '#ff6b6b' : '#4ecdc4'
+            }
+          ]} />
+        </View>
+        <Text style={styles.loadText}>{businessLoad}%</Text>
+      </View>
+
+      {/* Цели */}
+      <View style={styles.goalsSection}>
+        <Text style={styles.sectionTitle}>Ваши цели</Text>
+        {goals.map(goal => (
+          <GoalCard key={goal.id} goal={goal} />
+        ))}
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => navigation.navigate('CreateGoal')}
+        >
+          <Text style={styles.addButtonText}>+ Новая цель</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Задачи на день */}
+      <View style={styles.tasksSection}>
+        <Text style={styles.sectionTitle}>Задачи на день</Text>
+        {todayTasks.length === 0 ? (
+          <Text style={styles.noTasksText}>Нет задач на сегодня</Text>
+        ) : (
+          todayTasks.map(task => (
+            <TaskItem 
+              key={task.id} 
+              task={task}
+              onComplete={() => completeTask(task.id)}
+            />
+          ))
+        )}
+      </View>
+    </ScrollView>
+  );
+};
+```
+
+### 8.5 Webhook для синхронизации данных
+```javascript
+// webhooks.js
+app.post('/webhook/task-created', async (req, res) => {
+  const { record } = req.body;
+  
+  // Получение пользователя
+  const { data: user } = await supabase
+    .from('users')
+    .select('telegram_id, notification_settings')
+    .eq('id', record.user_id)
+    .single();
+
+  if (user?.telegram_id && user.notification_settings?.instant_notifications) {
+    // Отправка мгновенного уведомления
+    await bot.sendMessage(user.telegram_id, 
+      `📝 Создана новая задача: ${record.title}`,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            {
+              text: '📱 Посмотреть',
+              web_app: { 
+                url: `${process.env.WEB_APP_URL}/tasks/${record.id}` 
+              }
+            }
+          ]]
+        }
+      }
+    );
+  }
+  
+  res.sendStatus(200);
+});
+```
+
+## 9. Схемы взаимодействия компонентов
+
+### 9.1 Общая архитектура системы
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         TELEGRAM CLIENT                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ┌──────────────┐        ┌──────────────────────────┐          │
+│   │  Telegram    │        │   Telegram Web App       │          │
+│   │  Bot Chat    │◄──────►│   (React Native Web)     │          │
+│   └──────────────┘        └──────────────────────────┘          │
+│         ▲                           ▲                            │
+│         │                           │                            │
+└─────────┼───────────────────────────┼────────────────────────────┘
+          │                           │
+          ▼                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         BOT SERVER                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ┌──────────────┐        ┌──────────────────────────┐          │
+│   │   Bot API    │        │    Express Server        │          │
+│   │   Handler    │        │    (Webhooks)            │          │
+│   └──────────────┘        └──────────────────────────┘          │
+│         ▲                           ▲                            │
+│         │                           │                            │
+└─────────┼───────────────────────────┼────────────────────────────┘
+          │                           │
+          ▼                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         SUPABASE                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ┌──────────────┐    ┌──────────────┐    ┌────────────────┐    │
+│   │  PostgreSQL  │    │  Auth        │    │  Storage       │    │
+│   │  Database    │    │  Service     │    │  Service       │    │
+│   └──────────────┘    └──────────────┘    └────────────────┘    │
+│                                                                  │
+│   ┌──────────────┐    ┌──────────────┐    ┌────────────────┐    │
+│   │  Realtime    │    │  Edge        │    │  Row Level     │    │
+│   │  Engine      │    │  Functions   │    │  Security      │    │
+│   └──────────────┘    └──────────────┘    └────────────────┘    │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 9.2 Поток авторизации
+```
+┌─────────┐     ┌──────────┐     ┌──────────┐     ┌───────────┐
+│  User   │     │ Telegram │     │   Bot    │     │ Supabase  │
+│         │     │   Bot    │     │  Server  │     │           │
+└────┬────┘     └────┬─────┘     └────┬─────┘     └─────┬─────┘
+     │               │                │                  │
+     │   /start      │                │                  │
+     ├──────────────►│                │                  │
+     │               │   Webhook      │                  │
+     │               ├───────────────►│                  │
+     │               │                │  Check User      │
+     │               │                ├─────────────────►│
+     │               │                │                  │
+     │               │                │  User Data       │
+     │               │                │◄─────────────────┤
+     │               │                │                  │
+     │           Send WebApp Button   │                  │
+     │◄──────────────┤◄───────────────┤                  │
+     │               │                │                  │
+     │  Open WebApp  │                │                  │
+     ├──────────────►│                │                  │
+     │               │                │                  │
+     │          WebApp loads with     │                  │
+     │           Telegram ID          │                  │
+     │◄──────────────┤                │                  │
+     │               │                │                  │
+```
+
+### 9.3 Уведомления и взаимодействие
+```
+┌─────────────┐     ┌──────────┐     ┌──────────┐     ┌───────────┐
+│   Cron/     │     │   Bot    │     │ Telegram │     │   User    │
+│  Scheduler  │     │  Server  │     │   API    │     │           │
+└──────┬──────┘     └────┬─────┘     └────┬─────┘     └─────┬─────┘
+       │                 │                │                  │
+       │  Trigger        │                │                  │
+       ├────────────────►│                │                  │
+       │                 │  Get Users     │                  │
+       │                 ├──────────────► │                  │
+       │                 │  & Tasks       │ (Supabase)       │
+       │                 │◄──────────────┤                  │
+       │                 │                │                  │
+       │                 │  Send Message  │                  │
+       │                 ├───────────────►│                  │
+       │                 │                │  Notification    │
+       │                 │                ├─────────────────►│
+       │                 │                │                  │
+       │                 │                │  Click Action    │
+       │                 │                │◄─────────────────┤
+       │                 │                │                  │
+       │                 │  Callback      │                  │
+       │                 │◄───────────────┤                  │
+       │                 │                │                  │
+       │                 │  Update Task   │                  │
+       │                 ├──────────────► │                  │
+       │                 │                │ (Supabase)       │
+       │                 │                │                  │
+       │                 │  Answer Query  │                  │
+       │                 ├───────────────►│                  │
+       │                 │                │  Success ✅      │
+       │                 │                ├─────────────────►│
+       │                 │                │                  │
+```
+
+### 9.4 Realtime синхронизация
+```
+┌──────────────┐     ┌───────────┐     ┌──────────┐     ┌───────────┐
+│   WebApp     │     │ Supabase  │     │   Bot    │     │ Telegram  │
+│  (User A)    │     │ Realtime  │     │  Server  │     │  (User A) │
+└──────┬───────┘     └─────┬─────┘     └────┬─────┘     └─────┬─────┘
+       │                   │                │                  │
+       │  Complete Task    │                │                  │
+       ├──────────────────►│                │                  │
+       │                   │  Broadcast     │                  │
+       │                   ├───────────────►│                  │
+       │                   │                │  Send Update     │
+       │                   │                ├─────────────────►│
+       │  Update UI        │                │                  │
+       │◄──────────────────┤                │                  │
+       │                   │                │                  │
+```
+
+## 10. Развертывание и инфраструктура
 
 ### 8.1 Хостинг
 - Bot Server: VPS или облачный хостинг (Heroku, Railway)

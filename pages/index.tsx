@@ -24,6 +24,21 @@ export default function Home() {
         // Важно: вызываем ready() первым делом
         tg.ready();
         
+        // Парсим userId из initData (Telegram WebApp передает query string)
+        let userId = '';
+        if (tg.initData) {
+          const params = new URLSearchParams(tg.initData);
+          const userRaw = params.get('user');
+          if (userRaw) {
+            try {
+              const user = JSON.parse(userRaw);
+              userId = user.id;
+            } catch (e) {
+              userId = '';
+            }
+          }
+        }
+        
         // Собираем всю информацию
         const info = {
           // Основные данные
@@ -32,6 +47,7 @@ export default function Home() {
           initData: tg.initData,
           initDataLength: tg.initData?.length || 0,
           initDataUnsafe: tg.initDataUnsafe,
+          userId,
           
           // Проверка хэша
           hash: window.location.hash,
@@ -54,7 +70,7 @@ export default function Home() {
         setDebugInfo(info);
         
         // Проверяем наличие пользователя
-        if (tg.initDataUnsafe?.user) {
+        if (userId) {
           setStatus('✅ Пользователь найден! Переход...');
           setTimeout(() => router.push('/dashboard'), 1000);
         } else if (tg.initData) {

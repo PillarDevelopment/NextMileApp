@@ -15,80 +15,41 @@ export default function Home() {
   const [status, setStatus] = useState('Инициализация...');
   const [debugInfo, setDebugInfo] = useState<any>({});
   const [isWebApp, setIsWebApp] = useState(false);
+  const [initData, setInitData] = useState('');
+  const [userRaw, setUserRaw] = useState('');
+  const [userId, setUserId] = useState('');
+  const [tgObj, setTgObj] = useState<any>({});
+  const [parseError, setParseError] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      setIsWebApp(true);
-    }
-    // Ждем полной загрузки
-    const timer = setTimeout(() => {
-      if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-        const tg = window.Telegram.WebApp;
-        
-        // Важно: вызываем ready() первым делом
-        tg.ready();
-        
-        // Парсим userId из initData (Telegram WebApp передает query string)
-        let userId = '';
-        if (tg.initData) {
-          const params = new URLSearchParams(tg.initData);
-          const userRaw = params.get('user');
-          if (userRaw) {
-            try {
-              const user = JSON.parse(userRaw);
-              userId = user.id;
-            } catch (e) {
-              userId = '';
-            }
+    if (typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      setTgObj(tg);
+      setInitData(tg.initData || '');
+      let _userId = '';
+      let _userRaw = '';
+      let _parseError = '';
+      if (tg.initData) {
+        const params = new URLSearchParams(tg.initData);
+        _userRaw = params.get('user') || '';
+        setUserRaw(_userRaw);
+        if (_userRaw) {
+          try {
+            const user = JSON.parse(_userRaw);
+            _userId = user.id;
+            setUserId(_userId);
+          } catch (e) {
+            _parseError = String(e);
+            setParseError(_parseError);
+            setUserId('');
           }
-        }
-        
-        // Собираем всю информацию
-        const info = {
-          // Основные данные
-          version: tg.version,
-          platform: tg.platform,
-          initData: tg.initData,
-          initDataLength: tg.initData?.length || 0,
-          initDataUnsafe: tg.initDataUnsafe,
-          userId,
-          
-          // Проверка хэша
-          hash: window.location.hash,
-          hashDecoded: decodeURIComponent(window.location.hash),
-          
-          // Параметры запроса
-          search: window.location.search,
-          searchParams: Object.fromEntries(new URLSearchParams(window.location.search)),
-          
-          // Состояние
-          isExpanded: tg.isExpanded,
-          viewportHeight: tg.viewportHeight,
-          
-          // Тема
-          themeParams: tg.themeParams,
-          headerColor: tg.headerColor,
-          backgroundColor: tg.backgroundColor,
-        };
-        
-        setDebugInfo(info);
-        
-        // Проверяем наличие пользователя
-        if (userId) {
-          setStatus('✅ Пользователь найден! Переход...');
-          setTimeout(() => router.push('/dashboard'), 1000);
-        } else if (tg.initData) {
-          setStatus('⚠️ InitData есть, но пользователь не найден');
         } else {
-          setStatus('❌ Нет initData - откройте через кнопку в боте');
+          setUserId('');
         }
-      } else {
-        setStatus('❌ Telegram WebApp SDK не найден');
       }
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [router]);
+    }
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -99,9 +60,11 @@ export default function Home() {
       </div>
       
       <div className="w-full max-w-2xl bg-gray-100 p-4 rounded-lg overflow-auto">
-        <pre className="text-xs whitespace-pre-wrap">
-          {JSON.stringify(debugInfo, null, 2)}
-        </pre>
+        <div><b>initData:</b> <pre>{initData}</pre></div>
+        <div><b>userRaw:</b> <pre>{userRaw}</pre></div>
+        <div><b>userId:</b> <pre>{userId}</pre></div>
+        {parseError && <div style={{color:'red'}}><b>Parse error:</b> {parseError}</div>}
+        <div><b>tg object:</b> <pre>{JSON.stringify(tgObj, null, 2)}</pre></div>
       </div>
       
       <div className="mt-4 space-y-2">

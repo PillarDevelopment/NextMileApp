@@ -29,13 +29,19 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    if (!userId) {
-      setError('Нет данных Telegram пользователя. Откройте WebApp через Telegram или добавьте initData в query.');
-      setLoading(false);
-      return;
-    }
+    // if (!userId) {
+    //   setError('Нет данных Telegram пользователя. Откройте WebApp через Telegram или добавьте initData в query.');
+    //   setLoading(false);
+    //   return;
+    // }
     const fetchData = async () => {
       setLoading(true);
+      if (!userId) {
+        setGoals([]);
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
       const { data: goalsData } = await supabase.from('goals').select('*').eq('user_id', userId).order('deadline');
       const { data: tasksData } = await supabase.from('tasks').select('*').eq('user_id', userId).eq('status', 'todo');
       setGoals(goalsData || []);

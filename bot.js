@@ -1,66 +1,43 @@
 const { Telegraf } = require('telegraf');
-const bot = new Telegraf(' ');
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
-// Важно: используем keyboard, а не inline_keyboard
+const bot = new Telegraf(process.env.BOT_TOKEN);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+
+const WEB_APP_URL = process.env.WEB_APP_URL || 'https://next-mile-app.vercel.app';
+
+// /start — приветствие и web_app-кнопка
 bot.start((ctx) => {
-  const webAppUrl = 'https://next-mile-app.vercel.app';
-
-  ctx.reply('Добро пожаловать в NextMile! 🚀', {
+  ctx.reply('👋 Добро пожаловать в NextMile! Откройте дашборд по кнопке ниже:', {
     reply_markup: {
-      keyboard: [
-        [
-          {
-            text: '📱 Открыть NextMile App',
-            web_app: { url: webAppUrl }
-          }
-        ]
-      ],
-      resize_keyboard: true,
-      persistent: true,
-      one_time_keyboard: false
+      inline_keyboard: [[
+        { text: 'Открыть NextMile', web_app: { url: WEB_APP_URL } }
+      ]]
     }
   });
 });
 
-// Команда для установки menu button
-bot.command('setmenu', async (ctx) => {
-  try {
-    await ctx.telegram.setChatMenuButton({
-      chat_id: ctx.chat.id,
-      menu_button: {
-        type: 'web_app',
-        text: 'NextMile',
-        web_app: {
-          url: 'https://next-mile-app.vercel.app'
-        }
-      }
-    });
-
-    ctx.reply('✅ Menu button установлен! Теперь вы можете открыть приложение через кнопку меню.');
-  } catch (error) {
-    console.error('Error setting menu button:', error);
-    ctx.reply('❌ Ошибка при установке menu button: ' + error.message);
+// /dashboard — заглушка (пример интеграции с Supabase)
+bot.command('dashboard', async (ctx) => {
+  const telegramId = ctx.from.id;
+  // Пример: ищем пользователя по telegram_id (таблица users должна быть в Supabase)
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .single();
+  if (error || !user) {
+    ctx.reply('Пользователь не найден в базе. Зарегистрируйтесь через WebApp!');
+    return;
   }
+  ctx.reply(`Ваш дашборд (заглушка):\nИмя: ${user.name || '—'}\nID: ${user.id}`);
 });
 
-// Обработка данных от WebApp
-bot.on('web_app_data', (ctx) => {
-  const data = ctx.webAppData.data;
-  console.log('Received data from WebApp:', data);
-  ctx.reply(`Получены данные: ${data}`);
-});
-
-// Команда для тестирования
-bot.command('test', (ctx) => {
-  const debugInfo = {
-    chat_id: ctx.chat.id,
-    user_id: ctx.from.id,
-    username: ctx.from.username,
-    first_name: ctx.from.first_name,
-  };
-
-  ctx.reply(`Debug info:\n${JSON.stringify(debugInfo, null, 2)}`);
+// /help — краткая справка
+bot.help((ctx) => {
+  ctx.reply('Доступные команды:\n/start — открыть WebApp\n/dashboard — ваш дашборд');
 });
 
 bot.launch();
-console.log('Bot started successfully!');
+console.log('NextMileBot запущен!'); 

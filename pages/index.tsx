@@ -13,82 +13,96 @@ declare global {
 export default function Home() {
   const router = useRouter();
   const [status, setStatus] = useState('Инициализация...');
-  const [sdkLoaded, setSdkLoaded] = useState(false);
-  const [initData, setInitData] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<any>({});
 
   useEffect(() => {
-    let attempts = 0;
-    const maxAttempts = 50; // 5 секунд
-    
-    const checkSDK = setInterval(() => {
-      attempts++;
-      
+    // Ждем полной загрузки
+    const timer = setTimeout(() => {
       if (window.Telegram?.WebApp) {
-        clearInterval(checkSDK);
-        setSdkLoaded(true);
-        
         const tg = window.Telegram.WebApp;
         
-        // Важно: вызываем ready() немедленно
+        // Важно: вызываем ready() первым делом
         tg.ready();
         
-        setInitData({
+        // Собираем всю информацию
+        const info = {
+          // Основные данные
           version: tg.version,
           platform: tg.platform,
           initData: tg.initData,
+          initDataLength: tg.initData?.length || 0,
           initDataUnsafe: tg.initDataUnsafe,
+          
+          // Проверка хэша
+          hash: window.location.hash,
+          hashDecoded: decodeURIComponent(window.location.hash),
+          
+          // Параметры запроса
+          search: window.location.search,
+          searchParams: Object.fromEntries(new URLSearchParams(window.location.search)),
+          
+          // Состояние
           isExpanded: tg.isExpanded,
           viewportHeight: tg.viewportHeight,
-        });
+          
+          // Тема
+          themeParams: tg.themeParams,
+          headerColor: tg.headerColor,
+          backgroundColor: tg.backgroundColor,
+        };
         
+        setDebugInfo(info);
+        
+        // Проверяем наличие пользователя
         if (tg.initDataUnsafe?.user) {
-          setStatus('Пользователь найден, переход на dashboard...');
+          setStatus('✅ Пользователь найден! Переход...');
           setTimeout(() => router.push('/dashboard'), 1000);
+        } else if (tg.initData) {
+          setStatus('⚠️ InitData есть, но пользователь не найден');
         } else {
-          setStatus('Нет данных пользователя');
+          setStatus('❌ Нет initData - откройте через кнопку в боте');
         }
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkSDK);
-        setStatus('Telegram WebApp SDK не загрузился');
+      } else {
+        setStatus('❌ Telegram WebApp SDK не найден');
       }
-    }, 100);
+    }, 500);
     
-    return () => clearInterval(checkSDK);
+    return () => clearTimeout(timer);
   }, [router]);
 
-  const handleLogin = () => {
-    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-      router.push('/dashboard');
-    } else {
-      alert('Нет данных пользователя');
-    }
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4">
-      <h1 className="text-2xl font-bold mb-6">NextMile</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      <h1 className="text-2xl font-bold mb-6">NextMile Debug</h1>
       
       <div className="mb-4 p-4 bg-gray-100 rounded-lg">
-        <p className="font-semibold">Статус: {status}</p>
-        <p className="text-sm">SDK загружен: {sdkLoaded ? 'Да' : 'Нет'}</p>
+        <p className="text-lg font-semibold">{status}</p>
       </div>
       
-      {initData && (
-        <div className="mb-4 p-4 bg-gray-100 rounded-lg max-w-lg w-full overflow-auto">
-          <p className="font-semibold mb-2">Debug info:</p>
-          <pre className="text-xs">
-            {JSON.stringify(initData, null, 2)}
-          </pre>
-        </div>
-      )}
+      <div className="w-full max-w-2xl bg-gray-100 p-4 rounded-lg overflow-auto">
+        <pre className="text-xs whitespace-pre-wrap">
+          {JSON.stringify(debugInfo, null, 2)}
+        </pre>
+      </div>
       
-      <button
-        className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold"
-        onClick={handleLogin}
-        disabled={!sdkLoaded}
-      >
-        {sdkLoaded ? 'Войти' : 'Загрузка...'}
-      </button>
+      <div className="mt-4 space-y-2">
+        <button
+          className="bg-blue-500 text-white px-6 py-3 rounded-lg"
+          onClick={() => window.location.reload()}
+        >
+          Обновить
+        </button>
+        
+        {window.Telegram?.WebApp && (
+          <button
+            className="bg-green-500 text-white px-6 py-3 rounded-lg"
+            onClick={() => {
+              window.Telegram.WebApp.showAlert('Test Alert from WebApp');
+            }}
+          >
+            Тест Alert
+          </button>
+        )}
+      </div>
     </div>
   );
 }

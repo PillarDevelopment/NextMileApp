@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
-import { View, Text, Button, ActivityIndicator } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import GoalsList from './screens/GoalsList';
+import CreateGoal from './screens/CreateGoal';
+import GoalDetail from './screens/GoalDetail';
+import { View, Text, ActivityIndicator } from 'react-native';
+
+const Stack = createStackNavigator();
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -54,9 +61,16 @@ export default function App() {
   }
 
   return (
-    <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-      <Text>Добро пожаловать, Telegram ID: {user.telegram_id}</Text>
-      <Text>Это дашборд (заглушка)</Text>
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="GoalsList">
+        <Stack.Screen name="GoalsList" options={{ title: 'Мои цели' }}>
+          {props => <GoalsList {...props} user={user} />}
+        </Stack.Screen>
+        <Stack.Screen name="CreateGoal" options={{ title: 'Создать цель' }}>
+          {props => <CreateGoal {...props} user={user} />}
+        </Stack.Screen>
+        <Stack.Screen name="GoalDetail" options={{ title: 'Детали цели' }} component={GoalDetail} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 } 

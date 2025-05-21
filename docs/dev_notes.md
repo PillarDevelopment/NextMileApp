@@ -1,5 +1,15 @@
 # dev_notes.md
 
+## v0.3-sprint3
+
+- Для целей расширена схема таблицы goals (см. db/02_goals_extend.sql)
+- Включён RLS и политики доступа (см. db/03_goals_rls.sql)
+- CRUD для целей реализован через Supabase API (бот + webapp)
+- В боте реализованы команды /addgoal (wizard) и /goals (список)
+- В webapp реализованы экраны: список целей, создание, детали
+- Для навигации в webapp используется React Navigation
+- Все действия с целями завязаны на Telegram user ID через Supabase
+
 ## v0.2-sprint2
 
 - Для регистрации пользователя используется Supabase (таблица users)

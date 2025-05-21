@@ -5,6 +5,7 @@
 - `/bot` — Telegram-бот (Node.js, Telegraf)
 - `/web` — фронтенд (будет позже)
 - `/db` — SQL-миграции для Supabase
+- `/src/webapp` — React Native Web App (Expo)
 - `/src` — исходный код (будет позже)
 - `/tests` — автотесты (будет позже)
 - `/scripts` — вспомогательные скрипты (будет позже)
@@ -16,12 +17,21 @@
 3. Установите зависимости: `npm install`
 4. Запустите бота: `npm start`
 
+## Быстрый старт webapp (Expo)
+
+1. Перейдите в папку `src/webapp`
+2. Скопируйте `.env.example` в `.env` и вставьте параметры Supabase
+3. Установите зависимости: `npm install`
+4. Запустите webapp: `npm run web`
+
 ## Переменные окружения
 
 - `BOT_TOKEN` — токен Telegram-бота
 - `SUPABASE_URL` — URL вашего Supabase-проекта
 - `SUPABASE_SERVICE_KEY` — сервисный ключ Supabase
 - `WEB_APP_URL` — URL вашего Web App (React Native Web)
+- `EXPO_PUBLIC_SUPABASE_URL` — URL вашего Supabase для webapp
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY` — анонимный ключ Supabase для webapp
 
 ## Supabase
 
@@ -47,6 +57,7 @@
 - [x] Миграция в Supabase выполнена, таблицы созданы
 - [x] Бот запускается и отвечает на /start, /help, /status
 - [x] Пользователь регистрируется в базе при первом запуске
+- [x] Webapp запускается через Expo и отображает дашборд/ошибку
 - [x] Ошибок при запуске нет
 - [x] Документация и структура соответствуют master_promt_cursor.md
 

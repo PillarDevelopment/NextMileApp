@@ -7,6 +7,9 @@
 - Интеграция с Supabase через @supabase/supabase-js
 - Обновлён .env.example (SUPABASE_URL, SUPABASE_SERVICE_KEY, WEB_APP_URL)
 - Подготовка к запуску webapp (React Native Web)
+- Инициализирован Expo-проект в /src/webapp
+- Добавлен supabaseClient.js для webapp
+- Реализован базовый поток аутентификации через Telegram WebApp SDK и Supabase
 
 ## v0.1-sprint1
 

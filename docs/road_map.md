@@ -83,6 +83,8 @@
 
 ## Спринт 4: Система управления задачами (1-2 недели)
 
+[Реализация: см. CHANGELOG.md, src/app/tasks, src/app/create-task, src/types/task.ts, src/lib/tasksApi.ts, src/hooks/useTasks.ts]
+
 **Цели:**
 - Реализовать создание задач, связанных с целями
 - Создать ежедневное управление задачами

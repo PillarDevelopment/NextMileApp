@@ -1,5 +1,14 @@
 # dev_notes.md
 
+## v0.2-sprint2
+
+- Для регистрации пользователя используется Supabase (таблица users)
+- Проверка и регистрация происходят при /start
+- Для команд /help и /status реализованы шаблоны ответов
+- Используется Telegraf, но архитектура совместима с node-telegram-bot-api
+- Для доступа к Supabase используются переменные окружения SUPABASE_URL и SUPABASE_SERVICE_KEY
+- Для webapp будет использоваться React Native Web (см. roadmap)
+
 ## v0.1-sprint1
 
 - Проект разделён на /bot, /web, /db для изоляции логики

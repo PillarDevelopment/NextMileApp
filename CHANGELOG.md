@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.2-sprint2
+
+- Добавлена регистрация пользователя в Supabase при /start
+- Добавлены команды /help и /status в боте
+- Интеграция с Supabase через @supabase/supabase-js
+- Обновлён .env.example (SUPABASE_URL, SUPABASE_SERVICE_KEY, WEB_APP_URL)
+- Подготовка к запуску webapp (React Native Web)
+
 ## v0.1-sprint1
 
 - Инициализирован Node.js проект

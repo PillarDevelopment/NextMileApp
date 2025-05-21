@@ -37,3 +37,12 @@
 - Приоритет сортируется по убыванию (priority DESC)
 - UI: отдельные страницы для списка и создания задач
 - Edge case: задачи без goal_id не отображаются в списке целей 
+
+## Sprint 5: Analytics & Business Load
+
+- Для аналитики используется таблица daily_progress (user_id, date, load)
+- Для прогресса по целям используется функция get_goal_progress (user_id)
+- В dashboard/page.tsx реализован UI для Business Load и прогресса по целям (пока mock, готово к интеграции)
+- API: web/src/lib/analyticsApi.ts
+- Типы: web/src/types/analytics.ts
+- Edge case: если нет данных по нагрузке или прогрессу, отображается заглушка 

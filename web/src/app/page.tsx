@@ -14,6 +14,7 @@ export default function Home() {
   const isTelegram = useTelegramWebApp();
   const userId = useTelegramUser();
   const [loading, setLoading] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -44,11 +45,22 @@ export default function Home() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full flex flex-col items-center">
-          <Image src="/logo.svg" alt="NextMile" width={64} height={64} className="mb-4" />
+          {logoError ? (
+            <div className="mb-4 w-16 h-16 flex items-center justify-center bg-gray-200 rounded-full">
+              <span className="text-2xl text-gray-400">?</span>
+            </div>
+          ) : (
+            <Image src="/logo.svg" alt="NextMile" width={64} height={64} className="mb-4" onError={() => setLogoError(true)} />
+          )}
           <h1 className="text-2xl font-bold mb-2">NextMile</h1>
           <p className="text-gray-500 mb-6 text-center">
             Это мини-приложение Telegram.<br />
-            Пожалуйста, откройте его через Telegram (бот или меню мини-приложений).
+            <b>Telegram WebApp API не инициализирован.</b><br />
+            <ul className="text-left text-xs mt-2">
+              <li>— Откройте WebApp через <b>мобильный Telegram</b> (iOS/Android).</li>
+              <li>— Не используйте Telegram Desktop или браузер — там API может не работать.</li>
+              <li>— Проверьте, что домен WebApp добавлен в BotFather.</li>
+            </ul>
           </p>
         </div>
       </main>

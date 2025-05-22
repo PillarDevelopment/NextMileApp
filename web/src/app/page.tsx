@@ -35,6 +35,11 @@ export default function Home() {
     }
   }, [userId]);
 
+  useEffect(() => {
+    console.log('Telegram:', window.Telegram);
+    console.log('Telegram.WebApp:', window.Telegram?.WebApp);
+  }, []);
+
   if (isTelegram === false) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50">

@@ -95,7 +95,7 @@ bot.start(async (ctx) => {
   }
   await ctx.reply('👋 Добро пожаловать в NextMile! Откройте WebApp для продолжения:', {
     reply_markup: {
-      keyboard: [
+      inline_keyboard: [
         [
           {
             text: 'Открыть NextMile',
@@ -103,8 +103,6 @@ bot.start(async (ctx) => {
           },
         ],
       ],
-      resize_keyboard: true,
-      one_time_keyboard: true,
     },
   });
 });
